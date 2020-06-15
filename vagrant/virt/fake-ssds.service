@@ -1,0 +1,9 @@
+[Unit]
+Description=Fake SSDs
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/fake-ssds.sh
+
+[Install]
+WantedBy=multi-user.target

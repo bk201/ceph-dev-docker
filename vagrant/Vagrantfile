@@ -1,0 +1,50 @@
+# vi: set ft=ruby :
+
+NUM_DAEMONS = ENV["NUM_DAEMONS"] ? ENV["NUM_DAEMONS"].to_i : 1
+
+Vagrant.configure("2") do |config|
+  config.vm.synced_folder ".", "/vagrant", disabled: true
+  config.vm.network "private_network", type: "dhcp"
+  config.vm.box = "centos/8"
+
+  (0..NUM_DAEMONS - 1).each do |i|
+    config.vm.define "mon#{i}" do |mon|
+      mon.vm.hostname = "mon#{i}"
+    end
+    config.vm.define "mgr#{i}" do |mgr|
+      mgr.vm.hostname = "mgr#{i}"
+      mgr.vm.provider :libvirt do |libvirt|
+        libvirt.storage :file, :size => '10G', bus: "sata", serial: "mgr#{i}-1-ssd"
+        libvirt.storage :file, :size => '10G', bus: "sata", serial: "mgr#{i}-2-ssd"
+        libvirt.storage :file, :size => '20G', bus: "sata", serial: "mgr#{i}-3-hdd"
+        libvirt.storage :file, :size => '20G', bus: "sata", serial: "mgr#{i}-4-hdd"
+      end
+    end
+    config.vm.define "osd#{i}" do |osd|
+      osd.vm.hostname = "osd#{i}"
+      osd.vm.provider :libvirt do |libvirt|
+        libvirt.storage :file, :size => '10G', bus: "sata", serial: "osd#{i}-1-ssd"
+        libvirt.storage :file, :size => '10G', bus: "sata", serial: "osd#{i}-2-ssd"
+        libvirt.storage :file, :size => '20G', bus: "sata", serial: "osd#{i}-3-hdd"
+        libvirt.storage :file, :size => '20G', bus: "sata", serial: "osd#{i}-4-hdd"
+      end
+    end
+  end
+
+  config.vm.provision "file", source: "virt", destination: "/tmp/virt"
+
+  config.vm.provision "shell", inline: <<-SHELL
+    set -o errexit
+    sudo cp /tmp/virt/config /etc/selinux/config
+    sudo setenforce 0
+    sudo cp /tmp/virt/fake-ssds.service /etc/systemd/system/
+    sudo install -m 755 /tmp/virt/fake-ssds.sh /usr/bin/fake-ssds.sh
+    sudo systemctl daemon-reload
+    sudo systemctl enable --now fake-ssds
+
+    sudo cp -r /home/vagrant/.ssh /root/.ssh
+    sudo yum install -y python36 podman lvm2
+
+    sudo cp /tmp/virt/registries.conf /etc/containers/
+  SHELL
+end

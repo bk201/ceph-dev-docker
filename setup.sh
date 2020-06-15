@@ -1,3 +1,4 @@
+#!/bin/bash
 WORKSPACE="$(dirname "$(pwd)")"
 
 NAME="${NAME:-ceph-1}"
@@ -31,9 +32,12 @@ case "$VERSION" in
   ;;
 esac
 
+BUILD_DIR=/mnt/vol0/codes2/ceph-build-folders/build.$VERSION
+
 # Creates a container with all recommended configs
 docker run -itd \
   -v $CEPH:/ceph \
+  -v $BUILD_DIR:/ceph/build \
   -v $CCACHE:/root/.ccache \
   -v $(pwd)/shared:/shared \
   -v /run/udev:/run/udev:ro \

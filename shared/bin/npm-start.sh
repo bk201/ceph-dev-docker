@@ -10,6 +10,9 @@ fi
 
 cd /ceph/src/pybind/mgr/dashboard/frontend
 source /ceph/build/src/pybind/mgr/dashboard/node-env/bin/activate
+
+if [ x"${NO_CI}" = "x" ]; then
 npm ci --unsafe-perm
+fi
 
 npm start -- --disableHostCheck=true
